@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Challan Standalone</title>
+    <style>
+      /* Standalone, no frameworks. Designed to be compatible with older Chrome/WebView. */
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: #ffffff;
+        font-family:
+          Poppins,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Arial,
+          sans-serif;
+      }
+
+      .page {
+        width: 312px;
+        height: 312px;
+        /* display: flex; */
+        /* align-items: center; */
+        /* justify-content: center; */
+        /* padding: 12px; */
+        box-sizing: border-box;
+        background: #fafafa;
+      }
+
+      .challan-card {
+        width: 312px;
+        height: 312px;
+        background-image: url("./ChallanBackground.png");
+        background-size: 100% 100%;
+        background-position: center;
+        background-repeat: no-repeat;
+        border: 2px solid #333;
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .vehicle-number {
+        position: absolute;
+        top: 35%;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-family: Poppins, sans-serif;
+        font-weight: 600;
+        line-height: 1;
+        color: #111;
+        white-space: nowrap;
+        font-size: 2rem;
+        transform: translateY(-50%);
+      }
+
+      .subtext {
+        position: absolute;
+        top: 60.3846%;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-family: Poppins, sans-serif;
+        font-weight: 500;
+        line-height: 1.4;
+        color: #fff;
+        font-size: 1.2rem;
+        transform: translateY(-50%);
+      }
+
+      .bottom {
+        position: absolute;
+        top: 75%;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.2%;
+        font-family: Poppins, sans-serif;
+        font-weight: 600;
+        font-size: 1rem;
+        color: #fff;
+        text-align: center;
+        box-sizing: border-box;
+        padding: 0 8px;
+      }
+
+      .pill {
+        background-color: #fff;
+        color: #111;
+        border-radius: 10px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2% 3.2%;
+        line-height: 1;
+        min-width: 100px;
+      }
+
+      .error {
+        display: none;
+        margin-top: 12px;
+        max-width: 620px;
+        padding: 12px;
+        background: rgba(176, 0, 32, 0.95);
+        color: #fff;
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+        border-radius: 8px;
+        box-sizing: border-box;
+      }
+
+      /* Simple spinner (replaces MUI CircularProgress). */
+      .spinner {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 5px solid rgba(0, 0, 0, 0.15);
+        border-top-color: #111;
+        animation: spin 0.9s linear infinite;
+        box-sizing: border-box;
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="challan-card" id="card">
+        <div class="vehicle-number" id="vehicleNumber">--</div>
+        <div class="subtext">Passing Test Screen right now</div>
+        <div class="bottom" id="bottom"></div>
+      </div>
+      <div class="error" id="errorBox"></div>
+    </div>
+
+    <script>
+      (function () {
+        // Matches the REGISTRATION_NUMBERS array in `src/screens/Challan.tsx`.
+        var REGISTRATION_NUMBERS = [
+          "RJ14CQ1191",
+          "RJ26CB2278",
+          "RJ53UB0011",
+          "RJ14QC8512",
+          "RJ60CC9696",
+        ];
+
+        // Matches `CARS24_BASE_URL` in Challan.tsx.
+        var CARS24_BASE_URL =
+          "https://api.cars24.com/gw/plt/bffvendorsvc/partner/challan/b2b/fetch";
+
+        // IMPORTANT: Replace this token before hosting.
+        // Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        var AUTH_HEADER =
+          "Bearer eyJhbGciOiJFUzI1NiIsImtpZCI6IjI2YjM0NDgwLWQ5ZDEtNDQ4NS1iYzczLTRiN2IxOGJiOWUyNCIsInR5cCI6IkpXVCJ9.eyJhdWQiOltdLCJjbGllbnRfaWQiOiJjbGllbnRfQ3BOd2pTdEZwck9Wb2J2cXM4Z1lYQSIsImV4cCI6NDkyOTc1Njc2OSwiZXh0Ijp7fSwiaWF0IjoxNzczOTk2NzY5LCJpc3MiOiJodHRwczovL2F1dGguY2FyczI0LmNvbS8iLCJqdGkiOiJjNjczMjBhNi03NzdjLTQ4YjctYjYyMC1iYzc2OWFlZmIyMWMiLCJuYmYiOjE3NzM5OTY3NjksInNjcCI6W10sInN1YiI6ImNsaWVudF9DcE53alN0RnByT1ZvYnZxczhnWVhBIn0.GCx0acVAGy4JYVB_tfMkhMlrHg6XeWDnQT5OoKD5mx3HPd0Ui30KUrRhuTpoXEg3erZfR-VmVLr4vGSEsjQYuw";
+
+        // If you prefer passing the token at runtime:
+        // var AUTH_HEADER = new URLSearchParams(location.search).get("auth") || "";
+        // (Leave above AUTH_HEADER empty if you want URL param mode.)
+
+        function $(id) {
+          return document.getElementById(id);
+        }
+
+        var vehicleNumberEl = $("vehicleNumber");
+        var bottomEl = $("bottom");
+        var errorBoxEl = $("errorBox");
+        var cardEl = $("card");
+
+        var regIndex = 0;
+        var registrationNumber = REGISTRATION_NUMBERS[0];
+
+        var totalChallan = 0;
+        var totalChallanAmount = 0;
+        var pucStatus;
+        var insuranceStatus;
+        var isLoading = false;
+
+        var abortController = null;
+        var requestSeq = 0;
+
+        function showError(message) {
+          errorBoxEl.style.display = "block";
+          errorBoxEl.textContent = message;
+        }
+
+        function hideError() {
+          errorBoxEl.style.display = "none";
+          errorBoxEl.textContent = "";
+        }
+
+        function formatAmount(amount) {
+          try {
+            return (
+              new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 0,
+              }).format(amount) || ""
+            );
+          } catch (e) {
+            // Same fallback pattern as in Challan.tsx.
+            return "₹" + Math.round(amount).toLocaleString("en-IN");
+          }
+        }
+
+        function renderLoading() {
+          bottomEl.innerHTML = "";
+
+          // When loading, Challan.tsx still renders the registration number,
+          // and shows spinners in both value boxes.
+          var leftPill = document.createElement("span");
+          leftPill.className = "pill";
+          leftPill.appendChild(spinnerEl());
+
+          var rightPill = document.createElement("span");
+          rightPill.className = "pill";
+          rightPill.appendChild(spinnerEl());
+
+          // Layout: has [total] Challan of [amount] pending
+          var hasText = document.createElement("span");
+          hasText.textContent = "has";
+
+          var ofText = document.createElement("span");
+          ofText.textContent = "of";
+
+          var pendingText = document.createElement("span");
+          pendingText.textContent = "pending";
+
+          bottomEl.appendChild(hasText);
+          bottomEl.appendChild(leftPill);
+          bottomEl.appendChild(ofText);
+          bottomEl.appendChild(rightPill);
+          bottomEl.appendChild(pendingText);
+        }
+
+        function spinnerEl() {
+          var s = document.createElement("div");
+          s.className = "spinner";
+          return s;
+        }
+
+        function renderStatusMessage() {
+          bottomEl.innerHTML = "";
+
+          var msg = "";
+          var color = "green";
+
+          if (pucStatus === "expired") {
+            msg = "your PUCC has expired!";
+            color = "#ff5252";
+          } else if (pucStatus === "active" && insuranceStatus === "expired") {
+            msg = "your insurance has expired!";
+            color = "#ff5252";
+          } else {
+            msg = "no challan";
+            color = "green";
+          }
+
+          var text = document.createElement("div");
+          text.textContent = msg;
+          text.style.fontSize = "inherit";
+          text.style.fontWeight = "600";
+          text.style.lineHeight = "1";
+          text.style.color = color;
+          text.style.whiteSpace = "nowrap";
+
+          bottomEl.appendChild(text);
+        }
+
+        function renderChallan() {
+          bottomEl.innerHTML = "";
+
+          var hasText = document.createElement("span");
+          hasText.textContent = "has";
+
+          var challanPill = document.createElement("span");
+          challanPill.className = "pill";
+          var challanValue = document.createElement("span");
+          // Matches Challan.tsx: `${totalChallan} Challan` (word is inside pill).
+          challanValue.textContent = String(totalChallan) + " Challan";
+          challanValue.style.fontWeight = "700";
+          challanValue.style.color = "#111";
+          challanPill.appendChild(challanValue);
+
+          var ofText = document.createElement("span");
+          ofText.textContent = "of";
+
+          var amountPill = document.createElement("span");
+          amountPill.className = "pill";
+          amountPill.innerHTML = "";
+
+          var amountValue = document.createElement("span");
+          amountValue.textContent = formatAmount(totalChallanAmount);
+          amountValue.style.fontWeight = "700";
+          amountValue.style.color = "#111";
+          amountPill.appendChild(amountValue);
+
+          var pendingText = document.createElement("span");
+          pendingText.textContent = "pending";
+
+          bottomEl.appendChild(hasText);
+          bottomEl.appendChild(challanPill);
+          bottomEl.appendChild(ofText);
+          bottomEl.appendChild(amountPill);
+          bottomEl.appendChild(pendingText);
+        }
+
+        function render() {
+          vehicleNumberEl.textContent = registrationNumber;
+
+          if (isLoading) {
+            renderLoading();
+            return;
+          }
+
+          // Challan.tsx condition:
+          // {!isLoading && (totalChallan === 0 || totalChallanAmount === 0) ? status : challan}
+          if (totalChallan === 0 || totalChallanAmount === 0) {
+            renderStatusMessage();
+          } else {
+            renderChallan();
+          }
+        }
+
+        function setRegIndex(nextIndex) {
+          regIndex = nextIndex;
+          registrationNumber = REGISTRATION_NUMBERS[regIndex];
+          render();
+          fetchChallan();
+        }
+
+        function getAuthHeader() {
+          // URL param mode (optional):
+          // If AUTH_HEADER is empty, try `?auth=Bearer ...`.
+          if (AUTH_HEADER && AUTH_HEADER.trim()) return AUTH_HEADER;
+
+          try {
+            var params = new URLSearchParams(location.search);
+            var fromQuery = params.get("auth");
+            if (fromQuery && fromQuery.trim()) return fromQuery;
+          } catch (e) {
+            // Older browsers might not support URLSearchParams fully.
+          }
+
+          return AUTH_HEADER;
+        }
+
+        function fetchJson(url, headers) {
+          // Minimal fetch wrapper with XHR fallback for older environments.
+          if (typeof fetch === "function") {
+            return fetch(url, { method: "GET", headers: headers }).then(
+              function (res) {
+                return res.text().then(function (text) {
+                  var ok = res.ok;
+                  return { ok: ok, status: res.status, text: text };
+                });
+              },
+            );
+          }
+
+          return new Promise(function (resolve, reject) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+            Object.keys(headers || {}).forEach(function (k) {
+              try {
+                xhr.setRequestHeader(k, headers[k]);
+              } catch (e) {}
+            });
+
+            xhr.onreadystatechange = function () {
+              if (xhr.readyState !== 4) return;
+              var status = xhr.status;
+              var ok = status >= 200 && status < 300;
+              resolve({ ok: ok, status: status, text: xhr.responseText || "" });
+            };
+            xhr.onerror = function () {
+              reject(new Error("Network error"));
+            };
+            xhr.send(null);
+          });
+        }
+
+        function fetchChallan() {
+          var authHeader = getAuthHeader();
+
+          if (!authHeader) {
+            // Matches the "Missing env var ..." behavior by failing explicitly.
+            hideError();
+            isLoading = false;
+            totalChallan = 0;
+            totalChallanAmount = 0;
+            pucStatus = undefined;
+            insuranceStatus = undefined;
+            showError(
+              "Missing auth header. Set AUTH_HEADER in this HTML (or use ?auth=Bearer%20...).",
+            );
+            render();
+            return;
+          }
+
+          // Abort previous request if possible.
+          if (abortController && typeof abortController.abort === "function") {
+            try {
+              abortController.abort();
+            } catch (e) {}
+          }
+          abortController =
+            typeof AbortController === "function"
+              ? new AbortController()
+              : null;
+
+          var mySeq = ++requestSeq;
+          isLoading = true;
+          hideError();
+          // Reset statuses (React does this before calling the API).
+          pucStatus = undefined;
+          insuranceStatus = undefined;
+          render();
+
+          var url =
+            CARS24_BASE_URL + "/" + encodeURIComponent(registrationNumber);
+
+          var headers = {
+            Authorization: authHeader,
+            "Content-Type": "application/json",
+          };
+
+          fetchJson(url, headers)
+            .then(function (res) {
+              if (mySeq !== requestSeq) return; // stale response
+              if (!res.ok) {
+                throw new Error(
+                  "Cars24 API failed: " + res.status + " " + res.text,
+                );
+              }
+
+              // Parse JSON.
+              var data = {};
+              try {
+                data = JSON.parse(res.text || "{}");
+              } catch (e) {
+                // Keep as {} and continue.
+              }
+
+              if (typeof data.pucStatus === "string")
+                pucStatus = data.pucStatus;
+              if (typeof data.insuranceStatus === "string")
+                insuranceStatus = data.insuranceStatus;
+              if (data.registrationNumber)
+                registrationNumber = data.registrationNumber;
+              if (typeof data.totalChallan === "number")
+                totalChallan = data.totalChallan;
+              if (typeof data.totalChallanAmount === "number") {
+                totalChallanAmount = data.totalChallanAmount;
+              }
+            })
+            .catch(function (err) {
+              if (mySeq !== requestSeq) return;
+              showError(String(err && err.message ? err.message : err));
+            })
+            .finally(function () {
+              if (mySeq !== requestSeq) return;
+              isLoading = false;
+              render();
+            });
+        }
+
+        // Rotate vendor query every 15 seconds, like Challan.tsx.
+        setInterval(function () {
+          var next = (regIndex + 1) % REGISTRATION_NUMBERS.length;
+          setRegIndex(next);
+        }, 15000);
+
+        // Initial load.
+        render();
+        fetchChallan();
+      })();
+    </script>
+  </body>
+</html>
