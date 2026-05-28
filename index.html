@@ -140,26 +140,6 @@
         border-radius: 8px;
         box-sizing: border-box;
       }
-
-      /* Simple spinner (replaces MUI CircularProgress). */
-      .spinner {
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        border: 5px solid rgba(0, 0, 0, 0.15);
-        border-top-color: #111;
-        animation: spin 0.9s linear infinite;
-        box-sizing: border-box;
-      }
-
-      @keyframes spin {
-        from {
-          transform: rotate(0deg);
-        }
-        to {
-          transform: rotate(360deg);
-        }
-      }
     </style>
   </head>
   <body>
@@ -190,7 +170,6 @@
         var totalChallanAmount = 0;
         var pucStatus;
         var insuranceStatus;
-        var isLoading = false;
         var challanEventsCache = [];
         var currentVehiclePointer = 0;
         var consumedVehicleCountSinceFetch = 0;
@@ -222,39 +201,6 @@
           }
         }
 
-        function spinnerEl() {
-          var s = document.createElement("div");
-          s.className = "spinner";
-          return s;
-        }
-
-        function renderLoading() {
-          bottomEl.innerHTML = "";
-
-          var leftPill = document.createElement("span");
-          leftPill.className = "pill";
-          leftPill.appendChild(spinnerEl());
-
-          var rightPill = document.createElement("span");
-          rightPill.className = "pill2";
-          rightPill.appendChild(spinnerEl());
-
-          var hasText = document.createElement("span");
-          hasText.textContent = "has";
-
-          var ofText = document.createElement("span");
-          ofText.textContent = "of";
-
-          var pendingText = document.createElement("span");
-          pendingText.textContent = "pending";
-
-          bottomEl.appendChild(hasText);
-          bottomEl.appendChild(leftPill);
-          bottomEl.appendChild(ofText);
-          bottomEl.appendChild(rightPill);
-          bottomEl.appendChild(pendingText);
-        }
-
         function renderStatusMessage() {
           bottomEl.innerHTML = "";
 
@@ -262,13 +208,13 @@
           var color = "green";
 
           if (pucStatus === "expired") {
-            msg = "your PUCC has expired!";
+            msg = "Your PUCC has expired!";
             color = "#ff5252";
           } else if (pucStatus === "active" && insuranceStatus === "expired") {
-            msg = "your insurance has expired!";
+            msg = "Your insurance has expired!";
             color = "#ff5252";
           } else {
-            msg = "no challan";
+            msg = "No Challan";
             color = "green";
           }
 
@@ -323,11 +269,6 @@
 
         function render() {
           vehicleNumberEl.textContent = formatVehicalNumber(registrationNumber);
-
-          if (isLoading) {
-            renderLoading();
-            return;
-          }
 
           if (totalChallan === 0 || totalChallanAmount === 0) {
             renderStatusMessage();
@@ -417,11 +358,7 @@
               : null;
 
           var mySeq = ++requestSeq;
-          isLoading = true;
           hideError();
-          pucStatus = undefined;
-          insuranceStatus = undefined;
-          render();
 
           fetchJson(
             CHALLAN_EVENTS_URL,
@@ -457,7 +394,6 @@
             })
             .finally(function () {
               if (mySeq !== requestSeq) return;
-              isLoading = false;
               render();
             });
         }
