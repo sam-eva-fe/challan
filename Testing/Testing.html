@@ -140,6 +140,66 @@
         border-radius: 8px;
         box-sizing: border-box;
       }
+
+      .scan-overlay {
+        display: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 50;
+        background: rgba(5, 14, 26, 0.72);
+        overflow: hidden;
+      }
+
+      .scan-overlay.active {
+        display: block;
+      }
+
+      .scan-overlay .scan-text {
+        position: absolute;
+        top: 18px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        color: #c6f3ff;
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
+      .scan-overlay .scan-line {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 30px;
+        left: -30px;
+        background: #64eaff;
+        opacity: 0.4;
+        box-shadow: 0 0 18px #64eaff;
+        -webkit-animation: scan-move 2s linear infinite;
+        animation: scan-move 2s linear infinite;
+      }
+
+      @-webkit-keyframes scan-move {
+        0% {
+          left: -30px;
+        }
+        100% {
+          left: 100%;
+        }
+      }
+
+      @keyframes scan-move {
+        0% {
+          left: -30px;
+        }
+        100% {
+          left: 100%;
+        }
+      }
     </style>
   </head>
   <body>
@@ -148,6 +208,10 @@
         <div class="vehicle-number" id="vehicleNumber"></div>
         <div class="subtext">Passing Rambagh Circle right now</div>
         <div class="bottom" id="bottom"></div>
+        <div class="scan-overlay" id="scanOverlay">
+          <div class="scan-text">Scanning vehicle...</div>
+          <div class="scan-line"></div>
+        </div>
       </div>
       <div class="error" id="errorBox"></div>
     </div>
@@ -164,6 +228,7 @@
         var vehicleNumberEl = $("vehicleNumber");
         var bottomEl = $("bottom");
         var errorBoxEl = $("errorBox");
+        var scanOverlayEl = $("scanOverlay");
 
         var registrationNumber = "";
         var totalChallan = 0;
@@ -268,7 +333,17 @@
         }
 
         function render() {
-          vehicleNumberEl.textContent = formatVehicalNumber(registrationNumber);
+          vehicleNumberEl.textContent = registrationNumber
+            ? formatVehicalNumber(registrationNumber)
+            : "";
+
+          if (scanOverlayEl) {
+            if (registrationNumber === "") {
+              scanOverlayEl.className = "scan-overlay active";
+            } else {
+              scanOverlayEl.className = "scan-overlay";
+            }
+          }
 
           if (totalChallan === 0 || totalChallanAmount === 0) {
             renderStatusMessage();
@@ -278,7 +353,10 @@
         }
 
         function applyEventData(data) {
-          registrationNumber = data.registrationNumber || "--";
+          registrationNumber =
+            typeof data.registrationNumber === "string"
+              ? data.registrationNumber
+              : "";
           pucStatus =
             typeof data.pucStatus === "string" ? data.pucStatus : undefined;
           insuranceStatus =
