@@ -55,8 +55,8 @@
 
       .vehicle-number {
         position: absolute;
-        top: 32%;
-        left: 0px;
+        top: 33%;
+        left: 20px;
         right: 0;
         text-align: center;
         font-family: Poppins, sans-serif;
@@ -64,14 +64,14 @@
         line-height: 1;
         color: #111;
         white-space: nowrap;
-        font-size: 25px;
+        font-size: 30px;
         transform: translateY(-50%);
       }
 
       .subtext {
         position: absolute;
         top: 60.3846%;
-        left: 0;
+        left: 0px;
         right: 0;
         text-align: center;
         font-family: Poppins, sans-serif;
@@ -146,7 +146,7 @@
     <div class="page">
       <div class="challan-card" id="card">
         <div class="vehicle-number" id="vehicleNumber">--</div>
-        <div class="subtext">Passing Test Screen right now</div>
+        <div class="subtext">Passing Rambagh Circle right now</div>
         <div class="bottom" id="bottom"></div>
       </div>
       <div class="error" id="errorBox"></div>
@@ -410,7 +410,7 @@
             consumedVehicleCountSinceFetch = 0;
             fetchChallanEvents();
           }
-        }, 15000);
+        }, 5000);
 
         render();
         fetchChallanEvents();
