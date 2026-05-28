@@ -140,6 +140,66 @@
         border-radius: 8px;
         box-sizing: border-box;
       }
+
+      .scan-overlay {
+        display: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 50;
+        background: rgba(5, 14, 26, 0.72);
+        overflow: hidden;
+      }
+
+      .scan-overlay.active {
+        display: block;
+      }
+
+      .scan-overlay .scan-text {
+        position: absolute;
+        top: 18px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        color: #c6f3ff;
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
+      .scan-overlay .scan-line {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 40px;
+        left: -40px;
+        background: #64eaff;
+        opacity: 0.4;
+        box-shadow: 0 0 18px #64eaff;
+        -webkit-animation: scan-move 2s linear infinite;
+        animation: scan-move 2s linear infinite;
+      }
+
+      @-webkit-keyframes scan-move {
+        0% {
+          left: -40px;
+        }
+        100% {
+          left: 100%;
+        }
+      }
+
+      @keyframes scan-move {
+        0% {
+          left: -40px;
+        }
+        100% {
+          left: 100%;
+        }
+      }
     </style>
   </head>
   <body>
@@ -148,6 +208,10 @@
         <div class="vehicle-number" id="vehicleNumber"></div>
         <div class="subtext">Passing Test Screen right now</div>
         <div class="bottom" id="bottom"></div>
+        <div class="scan-overlay" id="scanOverlay">
+          <div class="scan-text">Scanning vehicle...</div>
+          <div class="scan-line"></div>
+        </div>
       </div>
       <div class="error" id="errorBox"></div>
     </div>
@@ -155,7 +219,7 @@
     <script>
       (function () {
         var CHALLAN_EVENTS_URL =
-          "https://backend-stage.evabharat.ai/traffic/challan/events?limit=3";
+          "https://backend-prod.evabharat.ai/traffic/challan/events?limit=3";
 
         function $(id) {
           return document.getElementById(id);
@@ -164,6 +228,7 @@
         var vehicleNumberEl = $("vehicleNumber");
         var bottomEl = $("bottom");
         var errorBoxEl = $("errorBox");
+        var scanOverlayEl = $("scanOverlay");
 
         var registrationNumber = "";
         var totalChallan = 0;
@@ -214,7 +279,7 @@
             msg = "Your insurance has expired!";
             color = "#ff5252";
           } else {
-            msg = "No Challan";
+            msg = "has No Challan 😁";
             color = "green";
           }
 
@@ -246,7 +311,7 @@
           challanPill.appendChild(challanValue);
 
           var ofText = document.createElement("span");
-          ofText.textContent = "worth ₹";
+          ofText.textContent = "worth";
 
           var amountPill = document.createElement("span");
           amountPill.className = "pill2";
@@ -268,7 +333,17 @@
         }
 
         function render() {
-          vehicleNumberEl.textContent = formatVehicalNumber(registrationNumber);
+          vehicleNumberEl.textContent = registrationNumber
+            ? formatVehicalNumber(registrationNumber)
+            : "";
+
+          if (scanOverlayEl) {
+            if (registrationNumber === "") {
+              scanOverlayEl.className = "scan-overlay active";
+            } else {
+              scanOverlayEl.className = "scan-overlay";
+            }
+          }
 
           if (totalChallan === 0 || totalChallanAmount === 0) {
             renderStatusMessage();
@@ -278,7 +353,10 @@
         }
 
         function applyEventData(data) {
-          registrationNumber = data.registrationNumber || "--";
+          registrationNumber =
+            typeof data.registrationNumber === "string"
+              ? data.registrationNumber
+              : "";
           pucStatus =
             typeof data.pucStatus === "string" ? data.pucStatus : undefined;
           insuranceStatus =

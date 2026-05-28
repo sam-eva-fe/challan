@@ -219,7 +219,7 @@
     <script>
       (function () {
         var CHALLAN_EVENTS_URL =
-          "https://backend-stage.evabharat.ai/traffic/challan/events?limit=3";
+          "https://backend-prod.evabharat.ai/traffic/challan/events?limit=3";
 
         function $(id) {
           return document.getElementById(id);
@@ -279,7 +279,7 @@
             msg = "Your insurance has expired!";
             color = "#ff5252";
           } else {
-            msg = "No Challan";
+            msg = "has No Challans 😁";
             color = "green";
           }
 
@@ -311,7 +311,7 @@
           challanPill.appendChild(challanValue);
 
           var ofText = document.createElement("span");
-          ofText.textContent = "worth ₹";
+          ofText.textContent = "worth";
 
           var amountPill = document.createElement("span");
           amountPill.className = "pill2";
