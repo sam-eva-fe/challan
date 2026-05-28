@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Challan Standalone</title>
+    <style>
+      /* Standalone, no frameworks. Designed to be compatible with older Chrome/WebView. */
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: #ffffff;
+        font-family:
+          Poppins,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Arial,
+          sans-serif;
+      }
+
+      .page {
+        width: 312px;
+        height: 312px;
+        /* display: flex; */
+        /* align-items: center; */
+        /* justify-content: center; */
+        /* padding: 12px; */
+        box-sizing: border-box;
+        background: #fafafa;
+      }
+
+      .challan-card {
+        width: 100%;
+        height: 100%;
+        /* background-image: url("https://aaac3a1c.eva-admin.pages.dev/ChallanBg.png"); */
+        background-image: url("./Testing.png");
+        background-size: 100% 100%;
+        background-position: center;
+        background-repeat: no-repeat;
+        border: 2px solid #333;
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+        object-fit: contain;
+      }
+
+      .vehicle-number {
+        position: absolute;
+        top: 32%;
+        left: 0px;
+        right: 0;
+        text-align: center;
+        font-family: Poppins, sans-serif;
+        font-weight: 600;
+        line-height: 1;
+        color: #111;
+        white-space: nowrap;
+        font-size: 25px;
+        transform: translateY(-50%);
+      }
+
+      .subtext {
+        position: absolute;
+        top: 60.3846%;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-family: Poppins, sans-serif;
+        font-weight: 500;
+        line-height: 1.4;
+        color: #fff;
+        font-size: 18px;
+        transform: translateY(-50%);
+      }
+
+      .bottom {
+        position: absolute;
+        top: 70%;
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.2%;
+        font-family: Poppins, sans-serif;
+        font-weight: 600;
+        font-size: 16px;
+        color: #fff;
+        text-align: center;
+        box-sizing: border-box;
+        padding: 0 8px;
+      }
+
+      .pill {
+        background-color: #fff;
+        color: #111;
+        border-radius: 10px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2% 3.2%;
+        line-height: 1;
+        /* min-width: 100px; */
+      }
+      .pill2 {
+        background-color: #ffcaca;
+        color: #da1212;
+        border-radius: 10px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2% 3.2%;
+        line-height: 1;
+        /* min-width: 100px; */
+      }
+
+      .error {
+        display: none;
+        margin-top: 12px;
+        max-width: 620px;
+        padding: 12px;
+        background: rgba(176, 0, 32, 0.95);
+        color: #fff;
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+        border-radius: 8px;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="challan-card" id="card">
+        <div class="vehicle-number" id="vehicleNumber">--</div>
+        <div class="subtext">Passing Test Screen right now</div>
+        <div class="bottom" id="bottom"></div>
+      </div>
+      <div class="error" id="errorBox"></div>
+    </div>
+
+    <script>
+      (function () {
+        var CHALLAN_EVENTS_URL =
+          "https://backend-stage.evabharat.ai/traffic/challan/events?limit=3";
+
+        function $(id) {
+          return document.getElementById(id);
+        }
+
+        var vehicleNumberEl = $("vehicleNumber");
+        var bottomEl = $("bottom");
+        var errorBoxEl = $("errorBox");
+
+        var registrationNumber = "--";
+        var totalChallan = 0;
+        var totalChallanAmount = 0;
+        var pucStatus;
+        var insuranceStatus;
+        var challanEventsCache = [];
+        var currentVehiclePointer = 0;
+        var consumedVehicleCountSinceFetch = 0;
+
+        var abortController = null;
+        var requestSeq = 0;
+
+        function showError(message) {
+          errorBoxEl.style.display = "block";
+          errorBoxEl.textContent = message;
+        }
+
+        function hideError() {
+          errorBoxEl.style.display = "none";
+          errorBoxEl.textContent = "";
+        }
+
+        function formatAmount(amount) {
+          try {
+            return (
+              new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 0,
+              }).format(amount) || ""
+            );
+          } catch (e) {
+            return "₹" + Math.round(amount).toLocaleString("en-IN");
+          }
+        }
+
+        function renderStatusMessage() {
+          bottomEl.innerHTML = "";
+
+          var msg = "";
+          var color = "green";
+
+          if (pucStatus === "expired") {
+            msg = "Your PUCC has expired!";
+            color = "#ff5252";
+          } else if (pucStatus === "active" && insuranceStatus === "expired") {
+            msg = "Your insurance has expired!";
+            color = "#ff5252";
+          } else {
+            msg = "No Challan";
+            color = "green";
+          }
+
+          var text = document.createElement("div");
+          text.textContent = msg;
+          text.style.fontSize = "inherit";
+          text.style.fontWeight = "600";
+          text.style.lineHeight = "1";
+          text.style.color = color;
+          text.style.whiteSpace = "nowrap";
+
+          bottomEl.appendChild(text);
+        }
+        function formatVehicalNumber(number) {
+          return `   ${number.slice(0, 2)} ${number.slice(2, 4)} ${number.slice(4, 6)} ${number.slice(6)}`;
+        }
+        function renderChallan() {
+          bottomEl.innerHTML = "";
+
+          var hasText = document.createElement("span");
+          hasText.textContent = "has";
+
+          var challanPill = document.createElement("span");
+          challanPill.className = "pill";
+          var challanValue = document.createElement("span");
+          challanValue.textContent = String(totalChallan) + " Challan";
+          //   challanValue.style.fontWeight = "700";
+          challanValue.style.color = "#111";
+          challanPill.appendChild(challanValue);
+
+          var ofText = document.createElement("span");
+          ofText.textContent = "of";
+
+          var amountPill = document.createElement("span");
+          amountPill.className = "pill2";
+
+          var amountValue = document.createElement("span");
+          amountValue.textContent = formatAmount(totalChallanAmount);
+          //   amountValue.style.fontWeight = "700";
+          // amountValue.style.color = "#111";
+          amountPill.appendChild(amountValue);
+
+          var pendingText = document.createElement("span");
+          pendingText.textContent = "pending";
+
+          bottomEl.appendChild(hasText);
+          bottomEl.appendChild(challanPill);
+          bottomEl.appendChild(ofText);
+          bottomEl.appendChild(amountPill);
+          bottomEl.appendChild(pendingText);
+        }
+
+        function render() {
+          vehicleNumberEl.textContent = formatVehicalNumber(registrationNumber);
+
+          if (totalChallan === 0 || totalChallanAmount === 0) {
+            renderStatusMessage();
+          } else {
+            renderChallan();
+          }
+        }
+
+        function applyEventData(data) {
+          registrationNumber = data.registrationNumber || "--";
+          pucStatus =
+            typeof data.pucStatus === "string" ? data.pucStatus : undefined;
+          insuranceStatus =
+            typeof data.insuranceStatus === "string"
+              ? data.insuranceStatus
+              : undefined;
+          totalChallan =
+            typeof data.totalChallan === "number" ? data.totalChallan : 0;
+          totalChallanAmount =
+            typeof data.totalChallanAmount === "number"
+              ? data.totalChallanAmount
+              : 0;
+        }
+
+        function showNextFromCache() {
+          if (!challanEventsCache.length) return false;
+          if (currentVehiclePointer >= challanEventsCache.length) {
+            currentVehiclePointer = 0;
+          }
+
+          var nextData = challanEventsCache[currentVehiclePointer] || {};
+          applyEventData(nextData);
+          currentVehiclePointer += 1;
+          consumedVehicleCountSinceFetch += 1;
+          render();
+          return true;
+        }
+
+        function fetchJson(url, headers, signal) {
+          if (typeof fetch === "function") {
+            return fetch(url, {
+              method: "GET",
+              headers: headers || {},
+              signal: signal,
+            }).then(function (res) {
+              return res.text().then(function (text) {
+                return { ok: res.ok, status: res.status, text: text };
+              });
+            });
+          }
+
+          return new Promise(function (resolve, reject) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", url, true);
+            Object.keys(headers || {}).forEach(function (k) {
+              try {
+                xhr.setRequestHeader(k, headers[k]);
+              } catch (e) {}
+            });
+
+            xhr.onreadystatechange = function () {
+              if (xhr.readyState !== 4) return;
+              var status = xhr.status;
+              resolve({
+                ok: status >= 200 && status < 300,
+                status: status,
+                text: xhr.responseText || "",
+              });
+            };
+            xhr.onerror = function () {
+              reject(new Error("Network error"));
+            };
+            xhr.send(null);
+          });
+        }
+
+        function fetchChallanEvents() {
+          if (abortController && typeof abortController.abort === "function") {
+            try {
+              abortController.abort();
+            } catch (e) {}
+          }
+
+          abortController =
+            typeof AbortController === "function"
+              ? new AbortController()
+              : null;
+
+          var mySeq = ++requestSeq;
+          hideError();
+
+          fetchJson(
+            CHALLAN_EVENTS_URL,
+            {},
+            abortController ? abortController.signal : undefined,
+          )
+            .then(function (res) {
+              if (mySeq !== requestSeq) return;
+              if (!res.ok) {
+                throw new Error(
+                  "Challan API failed: " + res.status + " " + res.text,
+                );
+              }
+
+              var payload = [];
+              try {
+                payload = JSON.parse(res.text || "[]");
+              } catch (e) {
+                payload = [];
+              }
+
+              var nextBatch = Array.isArray(payload) ? payload : [];
+              var hadAnyCache = challanEventsCache.length > 0;
+              challanEventsCache = challanEventsCache.concat(nextBatch);
+
+              if (!hadAnyCache && !showNextFromCache()) {
+                applyEventData({});
+              }
+            })
+            .catch(function (err) {
+              if (mySeq !== requestSeq) return;
+              showError(String(err && err.message ? err.message : err));
+            })
+            .finally(function () {
+              if (mySeq !== requestSeq) return;
+              render();
+            });
+        }
+
+        setInterval(function () {
+          var didDisplay = showNextFromCache();
+          if (!didDisplay) {
+            currentVehiclePointer = 0;
+            fetchChallanEvents();
+            return;
+          }
+
+          if (consumedVehicleCountSinceFetch >= 2) {
+            consumedVehicleCountSinceFetch = 0;
+            fetchChallanEvents();
+          }
+        }, 15000);
+
+        render();
+        fetchChallanEvents();
+      })();
+    </script>
+  </body>
+</html>
