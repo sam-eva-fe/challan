@@ -108,7 +108,7 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 2% 3.2%;
+        padding: 1.5% 1.8%;
         line-height: 1;
         min-width: 100px;
       }
@@ -120,7 +120,7 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 2% 3.2%;
+        padding: 1.5% 1.8%;
         line-height: 1;
         min-width: 100px;
       }
@@ -306,8 +306,11 @@
           challanPill.className = "pill";
           var challanValue = document.createElement("span");
           challanValue.textContent = String(totalChallan) + " Challans";
-          challanValue.style.fontWeight = "700";
+          // challanValue.style.fontWeight = "700";
           challanValue.style.color = "#111";
+          challanValue.style.marginRight = "20px";
+          challanValue.style.marginLeft = "20px";
+
           challanPill.appendChild(challanValue);
 
           var ofText = document.createElement("span");
@@ -315,10 +318,11 @@
 
           var amountPill = document.createElement("span");
           amountPill.className = "pill2";
-
+          amountPill.style.marginRight = "20px";
+          amountPill.style.marginLeft = "20px";
           var amountValue = document.createElement("span");
           amountValue.textContent = formatAmount(totalChallanAmount);
-          amountValue.style.fontWeight = "700";
+          // amountValue.style.fontWeight = "700";
           // amountValue.style.color = "#111";
           amountPill.appendChild(amountValue);
 
